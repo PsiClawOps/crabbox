@@ -1,7 +1,7 @@
 # Adapting Crabbox for local-mantis proof editions
 
 Status: architecture proposal
-Date: 2026-06-11
+Date: 2026-06-12
 Repos reviewed: `PsiClawOps/crabbox`, `PsiClawOps/local-mantis`
 Goal: adapt Crabbox's Docker and lifecycle model so different local-mantis editions can run as proof adapters inside Crabbox
 
@@ -39,6 +39,7 @@ The relevant public and local Crabbox material points to this model:
 - `local-container` supports desktop, browser, screenshot, video, VNC, and WebVNC helpers locally.
 - It can mount the host Docker socket only when `localContainer.dockerSocket: true` is set. This is powerful but weakens isolation because the lease can control the host engine.
 - Crabbox direct and local providers do not need the Cloudflare Worker broker. A broker is only required for shared brokered cloud providers such as AWS, Azure, GCP, and Hetzner.
+- The clean Docker path for local-mantis is to keep proof execution inside Crabbox jobs on `local-container`, then let the edition adapter own the surface logic and artifact contract.
 - Docker Compose lifecycle hooks can run commands after container start or before stop, but Docker documents that post-start timing is not guaranteed relative to the entrypoint. That means Compose hooks are useful for side tasks, not for readiness-critical proof sequencing.
 
 Key sources:
