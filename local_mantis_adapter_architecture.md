@@ -37,19 +37,41 @@ The relevant public and local Crabbox material points to this model:
 - `local-container` is a local runtime provider that starts a labeled Linux container through Docker-compatible CLIs such as Docker, Podman, OrbStack, Colima, or Lima.
 - The local-container provider publishes SSH on loopback, syncs the checkout over SSH, runs commands with the normal Crabbox SSH executor, and removes containers on stop.
 - `local-container` supports desktop, browser, screenshot, video, VNC, and WebVNC helpers locally.
+- Local-container is the right default for proof capture because it preserves Crabbox SSH sync, artifact downloads, desktop input helpers, and browser helpers in one runtime.
+- `provider: docker`, `provider: container`, and `provider: local-docker` are aliases for `local-container`, so the local Docker story is just the local-container story with friendlier names.
+- `crabbox doctor` is the right first preflight before a long workflow or after config and token changes.
+- `crabbox run` is the core verb: it syncs the dirty checkout, runs the command, streams output back, and exits with the remote exit code. That is the right wrapper for proof editions.
 - It can mount the host Docker socket only when `localContainer.dockerSocket: true` is set. This is powerful but weakens isolation because the lease can control the host engine.
 - Crabbox direct and local providers do not need the Cloudflare Worker broker. A broker is only required for shared brokered cloud providers such as AWS, Azure, GCP, and Hetzner.
 - The clean Docker path for local-mantis is to keep proof execution inside Crabbox jobs on `local-container`, then let the edition adapter own the surface logic and artifact contract.
+- Docker Sandbox is a separate delegated-run provider. It is useful when Docker's `sbx` microVM isolation is the product requirement, but it is not the first proof target because it does not expose the same SSH lease, desktop, browser, and download path that local-mantis needs.
 - Docker Compose lifecycle hooks can run commands after container start or before stop, but Docker documents that post-start timing is not guaranteed relative to the entrypoint. That means Compose hooks are useful for side tasks, not for readiness-critical proof sequencing.
 
 Key sources:
 
 - Crabbox local-container docs: https://crabbox.sh/providers/local-container.html
+- Crabbox Docker Sandbox provider docs: https://crabbox.sh/providers/docker-sandbox.html
 - Crabbox provider reference: https://crabbox.sh/providers/index.html
 - Crabbox getting started: https://crabbox.sh/getting-started.html
 - Crabbox infrastructure docs: https://crabbox.sh/infrastructure.html
 - Crabbox provider authoring: https://crabbox.sh/features/provider-authoring.html
+- Docker Sandboxes overview: https://docs.docker.com/ai/sandboxes/
 - Docker Compose lifecycle hooks: https://docs.docker.com/compose/how-tos/lifecycle/
+
+Search performed on 2026-06-12. The useful material was mostly Crabbox's own local-container and docker-sandbox documentation plus Docker's sandbox and Compose lifecycle references. Generic Docker deployment articles were not specific enough to change the architecture.
+
+## Architecture decision
+
+Do not make local-mantis a Crabbox provider in v1.
+
+Run local-mantis editions as Crabbox jobs on `local-container`, using proof images or native Docker checkpoints to remove bootstrap cost. Crabbox should own the box lifecycle, sync, command execution, downloads, timing, logs, and cleanup. local-mantis should own proof semantics: edition selection, surface driving, observation, validation, and manifest writing.
+
+This keeps the layers clean:
+
+- Crabbox answers: where does the job run, how is it synced, how is it cleaned up, and how do artifacts come home?
+- local-mantis answers: what user surface is being proven, how is it driven, what counts as pass/fail, and what proof is emitted?
+
+Only after the edition contract stabilizes should Crabbox grow a thin `proof` command or manifest-aware artifact helper.
 
 ## Crabbox architecture points that matter
 
